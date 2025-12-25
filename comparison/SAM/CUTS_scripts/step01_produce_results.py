@@ -47,7 +47,7 @@ def run(test_set, save_path, mode) -> None:
     use_cuda = torch.cuda.is_available()
 
     sam = sam_model_registry["default"](
-        checkpoint=os.path.join('../SAM_checkpoint/', "sam_vit_h_4b8939.pth"))
+        checkpoint=os.path.join('./SAM_checkpoint/', "sam_vit_h_4b8939.pth"))
     if use_cuda:
         sam.cuda()
 
@@ -153,7 +153,7 @@ if __name__ == "__main__":
         mode = 'generate'
     else:
         assert config.dataset_name in [
-            'retina', 'brain_ventricles', 'brain_tumor'
+            'retina', 'brain_ventricles', 'brain_tumor','brats'
         ]
         mode = 'predict'
     run(test_set, save_path, mode)

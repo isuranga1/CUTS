@@ -46,7 +46,7 @@ def run(test_set, save_path, mode) -> None:
     use_cuda = torch.cuda.is_available()
 
     medsam = sam_model_registry["vit_b"](
-        checkpoint=os.path.join('../MedSAM_checkpoint/', "medsam_vit_b.pth"))
+        checkpoint=os.path.join('../MedSAM_checkpoint/', "sam-med2d_b.pth"))
     if use_cuda:
         device = torch.device('cuda:0')
     else:

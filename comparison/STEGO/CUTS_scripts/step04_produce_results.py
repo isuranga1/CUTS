@@ -51,7 +51,7 @@ def my_app(config: AttributeHashmap, cfg: AttributeHashmap) -> None:
 
     assert len(cfg.model_paths) == 1
     model_path = sorted(glob(cfg.model_paths[0] + '*.ckpt'))[-1]
-
+    print("Loading model from: ",model_path)
     model = LitUnsupervisedSegmenter.load_from_checkpoint(model_path)
 
     test_set, _ = prepare_dataset(config, mode='test')

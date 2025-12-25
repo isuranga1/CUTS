@@ -171,7 +171,7 @@ if __name__ == "__main__":
         mode = 'generate'
     else:
         assert config.dataset_name in [
-            'retina', 'brain_ventricles', 'brain_tumor'
+            'retina', 'brain_ventricles', 'brain_tumor','brats'
         ]
         mode = 'predict'
     run(test_set, save_path, mode)

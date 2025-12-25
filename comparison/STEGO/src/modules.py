@@ -57,6 +57,7 @@ class DinoFeaturizer(nn.Module):
             msg = self.model.load_state_dict(state_dict, strict=False)
             print('Pretrained weights found at {} and loaded with msg: {}'.format(cfg.pretrained_weights, msg))
         else:
+            print("this is loading ")
             print("Since no pretrained weights have been provided, we load the reference pretrained DINO weights.")
             state_dict = torch.hub.load_state_dict_from_url(url="https://dl.fbaipublicfiles.com/dino/" + url)
             self.model.load_state_dict(state_dict, strict=True)
