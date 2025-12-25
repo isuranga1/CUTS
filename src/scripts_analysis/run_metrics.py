@@ -21,7 +21,10 @@ from utils.segmentation import label_hint_seg
 
 warnings.filterwarnings("ignore")
 
-
+def print_and_write(text, file):
+    print(text)
+    file.write(text + '\n')
+    
 def load_baselines(path: str) -> dict:
     numpy_array = np.load(path)
     hashmap = {}
@@ -415,6 +418,8 @@ if __name__ == '__main__':
 
         files_folder_baselines = '%s/%s' % (config.output_save_path,
                                             'numpy_files_seg_baselines')
+        files_folder_metrics = '%s/%s' % (config.output_save_path,
+                                            'metrics')
         files_folder_dfc = '%s/%s' % (config.output_save_path,
                                       'numpy_files_seg_DFC')
         files_folder_stego = '%s/%s' % (config.output_save_path,
@@ -959,17 +964,32 @@ if __name__ == '__main__':
                             meta_metrics[k1] = {}
                             meta_metrics[k1][k2] = [
                                 np.nanmean(metrics[k1][k2])
+         
+         
                             ]
+        os.makedirs(files_folder_metrics, exist_ok=True)
+        output_txt = os.path.join(files_folder_metrics, 'metrics.txt')
+        
+        with open(output_txt, 'w') as f:
 
-        print('\n\nResults (mean \u00B1 sem) for', config_file)
+            print_and_write(
+                f"\n\nResults (mean ± sem) for {config_file}",
+                f
+            )
 
-        for key in metric_name_map.keys():
-            print('\n\n', metric_name_map[key])
-            for (entry, _, _) in entity_tuples:
-                print('%s: %.3f \u00B1 %.3f' %
-                      (entry, np.nanmean(metrics[key][entry]),
-                       np.nanstd(metrics[key][entry]) /
-                       np.sqrt(len(metrics[key][entry]))))
+            for key in metric_name_map.keys():
+                print_and_write(f"\n\n{metric_name_map[key]}", f)
+
+                for (entry, _, _) in entity_tuples:
+                    mean = np.nanmean(metrics[key][entry])
+                    sem = np.nanstd(metrics[key][entry]) / np.sqrt(
+                        len(metrics[key][entry])
+                    )
+
+                    print_and_write(
+                        f"{entry}: {mean:.3f} ± {sem:.3f}",
+                        f
+                    )
 
     if META_ANALYSIS:
         print('\n\n')
