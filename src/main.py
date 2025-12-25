@@ -1,5 +1,6 @@
 import argparse
-
+from torch.utils.tensorboard import SummaryWriter
+import os
 import numpy as np
 import torch
 import yaml
@@ -39,7 +40,20 @@ def train(config: AttributeHashmap):
     loss_fn_contrastive = NTXentLoss()
 
     best_val_loss = np.inf
+    # ---- TensorBoard directory (use full config filename) ----
+    config_path = config.config_file_name   # e.g. ../config/brats_seed2.yaml
+    config_name = os.path.splitext(os.path.basename(config_path))[0]  # brats_seed2
 
+    tb_root = os.path.join(
+        os.path.dirname(config.log_dir),  # logs/
+        "tensorboard"
+    )
+
+    tb_log_dir = os.path.join(tb_root, config_name)
+
+    os.makedirs(tb_log_dir, exist_ok=True)
+
+    writer = SummaryWriter(log_dir=tb_log_dir)
     for epoch_idx in tqdm(range(config.max_epochs)):
         train_loss_recon, train_loss_contrastive, train_loss = 0, 0, 0
 
@@ -67,7 +81,17 @@ def train(config: AttributeHashmap):
         train_loss_contrastive = train_loss_contrastive / len(
             train_set.dataset)
         train_loss = train_loss / len(train_set.dataset)
-
+        
+                # ---- TensorBoard: Train losses ----
+        writer.add_scalar("Loss/Train/Reconstruction", train_loss_recon, epoch_idx)
+        writer.add_scalar("Loss/Train/Contrastive", train_loss_contrastive, epoch_idx)
+        writer.add_scalar("Loss/Train/Total", train_loss, epoch_idx)
+        # Learning rate
+        writer.add_scalar(
+            "LR",
+            optimizer.param_groups[0]["lr"],
+            epoch_idx
+        )
         scheduler.step()
 
         log('Train [%s/%s] recon loss: %.3f, contrastive loss: %.3f, total loss: %.3f'
@@ -98,11 +122,18 @@ def train(config: AttributeHashmap):
         val_loss_recon = val_loss_recon / len(val_set.dataset)
         val_loss_contrastive = val_loss_contrastive / len(val_set.dataset)
         val_loss = val_loss / len(val_set.dataset)
+        
+        # ---- TensorBoard: Validation losses ----
+        writer.add_scalar("Loss/Val/Reconstruction", val_loss_recon, epoch_idx)
+        writer.add_scalar("Loss/Val/Contrastive", val_loss_contrastive, epoch_idx)
+        writer.add_scalar("Loss/Val/Total", val_loss, epoch_idx)
+        
         log('Validation [%s/%s] recon loss: %.3f, contrastive loss: %.3f, total loss: %.3f'
             % (epoch_idx + 1, config.max_epochs, val_loss_recon,
                val_loss_contrastive, val_loss),
             filepath=config.log_dir,
             to_console=False)
+        
 
         if val_loss < best_val_loss:
             best_val_loss = val_loss
@@ -110,7 +141,8 @@ def train(config: AttributeHashmap):
             log('CUTSEncoder: Model weights successfully saved.',
                 filepath=config.log_dir,
                 to_console=False)
-
+            
+    writer.close()
     return
 
 
