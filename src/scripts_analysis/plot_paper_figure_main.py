@@ -23,6 +23,31 @@ from utils.metrics import dice_coeff, per_class_dice_coeff
 
 warnings.filterwarnings("ignore")
 
+METHOD_TITLES = {
+    "image": "Image",
+    "label_true": "GT",
+    "seg_kmeans": "CUTS + KMeans",
+    "label_kmeans": "KMeans",
+    "seg_persistent": "Persistent",
+    "label_persistent": "Persistent",
+    "seg_best": "Best (Dice)",
+    "label_best": "Best (Dice)",
+    "label_random": "Random",
+    "label_watershed": "Watershed",
+    "label_felzenszwalb": "Felzenszwalb",
+    "label_slic": "SLIC",
+    "label_dfc": "DFC",
+    "label_stego": "STEGO",
+    "label_sam": "SAM",
+    "label_sam_med2d": "SAM-Med2D",
+    "label_sam_med2d_box": "SAM-Med2D (Box)",
+    "label_medsam": "MedSAM",
+    "label_medsam_box": "MedSAM (Box)",
+    "label_supervised_unet": "UNet",
+    "label_supervised_nnunet": "nnUNet",
+}
+TITLE_FONTSIZE = 10
+
 
 def grayscale_3channel(image: np.array) -> np.array:
     if len(image.shape) == 2:
@@ -78,18 +103,20 @@ def plot_comparison(fig: plt.figure, num_samples: int, sample_idx: int,
         'label_supervised_unet',
         'label_supervised_nnunet',
     ]
-    num_labels = len(label_keys)
-    num_cols = num_labels + 1
+    num_cols = len(label_keys) + 1
 
-    ##### 1-st row!
+    # Image
     ax = fig.add_subplot(num_samples, num_cols, 1 + num_cols * sample_idx)
     ax.imshow(data_hashmap['image'], cmap='gray' if image_grayscale else None)
+    if sample_idx == 0:
+        ax.set_title("Image", fontsize=TITLE_FONTSIZE)
     ax.set_axis_off()
 
-    for (figure_idx, key) in zip(range(2, 2 + num_labels), label_keys):
-        ax = fig.add_subplot(num_samples, num_cols,
-                             figure_idx + num_cols * sample_idx)
+    for i, key in enumerate(label_keys, start=2):
+        ax = fig.add_subplot(num_samples, num_cols, i + num_cols * sample_idx)
         ax.imshow(data_hashmap[key], cmap='gray' if label_binary else 'tab20')
+        if sample_idx == 0:
+            ax.set_title(METHOD_TITLES.get(key, key), fontsize=TITLE_FONTSIZE)
         ax.set_axis_off()
 
     return fig
@@ -124,54 +151,53 @@ def plot_overlaid_comparison(fig: plt.figure,
         'label_supervised_unet',
         'label_supervised_nnunet',
     ]
-    num_labels = len(label_keys)
-    num_cols = num_labels + 1
 
+    num_cols = len(label_keys) + 1
     true_color = (0, 255, 0)
-    if pred_color == 'blue':
-        pred_color = (0, 0, 255)
-    elif pred_color == 'red':
-        pred_color = (255, 0, 0)
-
-    ##### 1-st row!
-    ax = fig.add_subplot(num_samples, num_cols, 1 + num_cols * sample_idx)
+    pred_color = (0, 0, 255) if pred_color == 'blue' else (255, 0, 0)
 
     image = np.uint8(255 * data_hashmap['image'].copy())
     if image_grayscale:
         image = grayscale_3channel(image)
-    label_true = data_hashmap['label_true']
 
-    # Contour of ground truth label
-    true_contours, _hierarchy = cv2.findContours(np.uint8(label_true),
-                                                 cv2.RETR_TREE,
-                                                 cv2.CHAIN_APPROX_NONE)
-    for contour in true_contours:
-        cv2.drawContours(image, contour, -1, true_color, 1)
+    true_contours, _ = cv2.findContours(
+        np.uint8(data_hashmap['label_true']),
+        cv2.RETR_TREE,
+        cv2.CHAIN_APPROX_NONE
+    )
+
+    ax = fig.add_subplot(num_samples, num_cols, 1 + num_cols * sample_idx)
+    for c in true_contours:
+        cv2.drawContours(image, c, -1, true_color, 2)
     ax.imshow(image)
+    if sample_idx == 0:
+        ax.set_title("Image + GT", fontsize=TITLE_FONTSIZE)
     ax.set_axis_off()
 
-    for (figure_idx, key) in zip(range(2, 2 + num_labels), label_keys):
-        image = np.uint8(255 * data_hashmap['image'].copy())
+    for i, key in enumerate(label_keys, start=2):
+        img = np.uint8(255 * data_hashmap['image'].copy())
         if image_grayscale:
-            image = grayscale_3channel(image)
+            img = grayscale_3channel(img)
 
-        for contour in true_contours:
-            cv2.drawContours(image, contour, -1, true_color, 4)
-        pred_contours, _hierarchy = cv2.findContours(
-            np.uint8(data_hashmap[key]), cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
-        for contour in pred_contours:
-            if key == 'label_random':
-                weight = 1
-            else:
-                weight = 4
-            cv2.drawContours(image, contour, -1, pred_color, weight)
-        ax = fig.add_subplot(num_samples, num_cols,
-                             figure_idx + num_cols * sample_idx)
-        ax.imshow(image)
+        for c in true_contours:
+            cv2.drawContours(img, c, -1, true_color, 2)
+
+        pred_contours, _ = cv2.findContours(
+            np.uint8(data_hashmap[key]),
+            cv2.RETR_TREE,
+            cv2.CHAIN_APPROX_NONE
+        )
+
+        for c in pred_contours:
+            cv2.drawContours(img, c, -1, pred_color, 3)
+
+        ax = fig.add_subplot(num_samples, num_cols, i + num_cols * sample_idx)
+        ax.imshow(img)
+        if sample_idx == 0:
+            ax.set_title(METHOD_TITLES.get(key, key), fontsize=TITLE_FONTSIZE)
         ax.set_axis_off()
 
     return fig
-
 
 def plot_results(fig: plt.figure,
                  num_samples: int,
